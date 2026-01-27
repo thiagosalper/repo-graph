@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repo Graph - Visualizador de Dependências</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #58a6ff;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 0.5rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      background: #238636;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: #2ea043;
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #cy {
+      flex: 1;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    }
+
+    .sidebar {
+      width: 300px;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .sidebar-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: #58a6ff;
+    }
+
+    .project-item {
+      padding: 0.75rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .project-item:hover {
+      background: #1c2128;
+      border-color: #58a6ff;
+    }
+
+    .project-item.selected {
+      background: #238636;
+      border-color: #238636;
+    }
+
+    .project-name {
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+
+    .project-path {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 0.25rem;
+    }
+
+    .project-deps {
+      font-size: 0.75rem;
+      color: #79c0ff;
+      margin-top: 0.25rem;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-size: 1.1rem;
+    }
+
+    .error {
+      color: #f85149;
+      padding: 1rem;
+      background: #161b22;
+      border: 1px solid #f85149;
+      border-radius: 6px;
+      margin: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 Repo Graph</h1>
+    <div class="controls">
+      <input type="text" id="rootPath" placeholder="Caminho raiz (deixe vazio para usar cwd)" />
+      <button onclick="loadGraph()">Carregar Grafo</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="cy"></div>
+    <div class="sidebar">
+      <div class="sidebar-title">Projetos</div>
+      <div id="projectsList"></div>
+    </div>
+  </div>
+
+  <script>
+    let cy = cytoscape({
+      container: document.getElementById('cy'),
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'background-color': '#58a6ff',
+            'label': 'data(label)',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'font-size': '12px',
+            'padding': '10px',
+            'border-width': 2,
+            'border-color': '#0d1117',
+          },
+        },
+        {
+          selector: 'node:selected',
+          style: {
+            'background-color': '#238636',
+            'border-color': '#58a6ff',
+          },
+        },
+        {
+          selector: 'edge',
+          style: {
+            'line-color': '#30363d',
+            'target-arrow-color': '#30363d',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'width': 2,
+          },
+        },
+        {
+          selector: 'edge:selected',
+          style: {
+            'line-color': '#58a6ff',
+            'target-arrow-color': '#58a6ff',
+            'width': 3,
+          },
+        },
+      ],
+      layout: {
+        name: 'cose',
+        directed: true,
+        animate: true,
+        animationDuration: 500,
+        nodeSeparation: 50,
+      },
+    });
+
+    let graphData = null;
+
+    async function loadGraph() {
+      const rootPath = document.getElementById('rootPath').value;
+      const url = rootPath ? `/api/graph?root=${encodeURIComponent(rootPath)}` : '/api/graph';
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Erro ao carregar grafo');
+
+        graphData = await response.json();
+        renderGraph(graphData);
+        updateProjectsList(graphData.projects);
+      } catch (error) {
+        console.error('Erro:', error);
+        document.getElementById('projectsList').innerHTML =
+          `<div class="error">Erro ao carregar o grafo: ${error.message}</div>`;
+      }
+    }
+
+    function renderGraph(data) {
+      const elements = [
+        ...data.nodes.map((n) => ({ data: { id: n.id, label: n.label } })),
+        ...data.edges.map((e) => ({ data: { source: e.source, target: e.target } })),
+      ];
+
+      cy.elements().remove();
+      cy.add(elements);
+      cy.layout({ name: 'cose', directed: true, animate: true }).run();
+    }
+
+    function updateProjectsList(projects) {
+      const list = document.getElementById('projectsList');
+      list.innerHTML = projects
+        .map(
+          (p) => `
+        <div class="project-item" onclick="selectProject('${p.id}')">
+          <div class="project-name">${p.name}</div>
+          <div class="project-path">📁 ${p.path || '.'}</div>
+          <div class="project-deps">📦 ${p.dependencies.length} deps</div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function selectProject(id) {
+      cy.$(`#${id}`).select();
+      document.querySelectorAll('.project-item').forEach((el) => el.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+    }
+
+    // Carregar grafo ao iniciar
+    window.addEventListener('load', loadGraph);
+  </script>
+</body>
+</html>
