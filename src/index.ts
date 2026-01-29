@@ -3,11 +3,20 @@ import { serveStatic } from 'hono/bun';
 import { spawn } from 'bun';
 import { scanMonorepo, clearPackageCache, getCacheStats, scanMonorepoFinderProjects } from './scanner';
 import { join } from 'path';
+import { Eta } from 'eta'
+import path from 'path'
 
 const app = new Hono();
+const eta = new Eta({ views: path.join(__dirname, 'view') })
 
 // Servir arquivos estáticos
 app.use('/*', serveStatic({ root: './public' }));
+
+app.get('/cache', async (c) => {
+  const cache = getCacheStats();
+  const template = eta.render('./cache', { cacheObj: cache });
+  return c.html(template);
+});
 
 // API endpoint para obter o grafo de dependências
 app.get('/api/graph', async (c) => {

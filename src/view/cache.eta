@@ -1,0 +1,19 @@
+<% layout('layout') %>
+
+
+  <div class="container">
+    <!-- <div class="sidebar-title">Projetos</div> -->
+    <div id="projectsList">
+    <h1>Total: <%= it.cacheObj.size %></h1>
+
+    <% it.cacheObj.entries.forEach(function(cache) { %>
+    
+    <div class="project-item">
+      <div class="project-path">📁 <%= cache %></div>
+    </div>
+    
+    <% }) %>
+
+    </div>
+
+  </div>
