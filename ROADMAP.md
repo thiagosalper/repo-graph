@@ -9,6 +9,12 @@
 - para buscar problemas conhecidos (?)
 
 # Botao para descobrir quem usa a lib 
-- na parte de detalhes
+- na parte de detalhess
 - botao que busca a lib selecionada como dependencia de outras
 - mostra uma lista como é feito com a lista principal
+
+# desofuscamento de erro 
+- interface para desofuscamento 
+- ferramenta retrace do android sdk para maperar nomes ofuscados 
+- android/cmdline-tools/atest/bin/retrace mapping.txt stacktrace.txt
+
