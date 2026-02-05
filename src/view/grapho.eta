@@ -1,0 +1,128 @@
+<% layout('layout') %>
+
+<div class="container">
+    <div id="cy"></div>
+    <div class="sidebar">
+      <div class="sidebar-title">Projetos</div>
+      <div id="projectsList"></div>
+    </div>
+  </div>
+
+  <script>
+    let cy = cytoscape({
+      container: document.getElementById('cy'),
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'background-color': '#58a6ff',
+            'label': 'data(label)',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'font-size': '12px',
+            'padding': '10px',
+            'border-width': 2,
+            'border-color': '#0d1117',
+          },
+        },
+        {
+          selector: 'node:selected',
+          style: {
+            'background-color': '#238636',
+            'border-color': '#58a6ff',
+          },
+        },
+        {
+          selector: 'edge',
+          style: {
+            'line-color': '#30363d',
+            'target-arrow-color': '#30363d',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'width': 2,
+          },
+        },
+        {
+          selector: 'edge:selected',
+          style: {
+            'line-color': '#58a6ff',
+            'target-arrow-color': '#58a6ff',
+            'width': 3,
+          },
+        },
+      ],
+      layout: {
+        name: 'cose',
+        directed: true,
+        animate: false,
+        // animationDuration: 500,
+        nodeSeparation: 50,
+      },
+    });
+
+    let graphData = null;
+
+    async function loadGraph() {
+      const rootPath = document.getElementById('rootPath').value;
+      const maxDepth = document.getElementById('maxDepth').value;
+      const maxFiles = document.getElementById('maxFiles').value;
+      const filter = document.getElementById('filter').value;
+      
+      // let url = rootPath ? `/api/graph?root=${encodeURIComponent(rootPath)}` : '/api/graph';
+      let url = '/api/graph';
+      const params = new URLSearchParams();
+      if (maxDepth) params.append('maxDepth', maxDepth);
+      if (maxFiles) params.append('maxFiles', maxFiles);
+      if (filter) params.append('filter', filter);
+      if (rootPath) params.append('root', rootPath);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Erro ao carregar grafo');
+
+        graphData = await response.json();
+        renderGraph(graphData);
+        updateProjectsList(graphData.projects);
+      } catch (error) {
+        console.error('Erro:', error);
+        document.getElementById('projectsList').innerHTML =
+          `<div class="error">Erro ao carregar o grafo: ${error.message}</div>`;
+      }
+    }
+
+    function renderGraph(data) {
+      const elements = [
+        ...data.nodes.map((n) => ({ data: { id: n.id, label: n.label } })),
+        ...data.edges.map((e) => ({ data: { source: e.source, target: e.target } })),
+      ];
+
+      cy.elements().remove();
+      cy.add(elements);
+      cy.layout({ name: 'cose', directed: true, animate: false }).run();
+    }
+
+    function updateProjectsList(projects) {
+      const list = document.getElementById('projectsList');
+      list.innerHTML = projects
+        .map(
+          (p) => `
+        <div class="project-item" onclick="selectProject('${p.id}')">
+          <div class="project-name">${p.name}</div>
+          <div class="project-path">📁 ${p.path || '.'}</div>
+          <div class="project-deps">📦 ${p.dependencies.length} deps</div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function selectProject(id) {
+      cy.$(`#${id}`).select();
+      document.querySelectorAll('.project-item').forEach((el) => el.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+    }
+
+    // Carregar grafo ao iniciar
+    window.addEventListener('load', loadGraph);
+  </script>

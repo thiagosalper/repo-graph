@@ -32,7 +32,7 @@
 
     h1 {
       font-size: 1.5rem;
-      color: #58a6ff;
+      color: white;
     }
 
     .controls {
@@ -86,7 +86,7 @@
     }
 
     .sidebar {
-      width: 300px;
+      width: 50%;
       background: #161b22;
       border-left: 1px solid #30363d;
       overflow-y: auto;
@@ -131,6 +131,11 @@
       margin-top: 0.25rem;
     }
 
+    .project-path a, .project-name a {
+      color: orange;
+      text-decoration: none;  
+    }
+
     .project-deps {
       font-size: 0.75rem;
       color: #79c0ff;
@@ -142,7 +147,10 @@
       align-items: center;
       justify-content: center;
       height: 100vh;
+      width: 100%;
       font-size: 1.1rem;
+      position: absolute;
+      background-color: rgba(13, 17, 23, 0.6);
     }
 
     .error {
@@ -153,94 +161,75 @@
       border-radius: 6px;
       margin: 1rem;
     }
+
+    #projectsList {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .tag-dep {
+      display: inline-block;
+      background: #30363d;
+      color: #c9d1d9;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      margin: 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .tag-dep a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+
   </style>
 </head>
 <body>
+    <div class="loading">Carregando...</div>
   <nav style="padding: 16px;">
-    <a href="find.html" style="color: #58a6ff; text-decoration: none; font-weight: 500;">Ir para Encontrar Projeto</a>
-    <a href="index.html" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Ir para Visualizador de Grafo</a>
-  </nav>
+      <a href="find.html" style="color: #58a6ff; text-decoration: none; font-weight: 500;">Encontrar</a>
+      <a href="index.html" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Grafo</a>
+      <a href="dependency.html" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Dependências</a>
+      <a href="cache" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Cache</a>
+    </nav>
   <header>
-    <h1>📊 Repo Graph</h1>
+    <h1>📊 RepAi</h1>
+    
+    <span id="stats"></span>
+    
     <div class="controls">
       <input type="number" id="maxDepth" placeholder="Profundidade máxima" value="5" />
       <input type="number" id="maxFiles" placeholder="Número máximo de arquivos" value="500" />
       <input type="text" id="rootPath" style="min-width: 300px;" placeholder="Caminho raiz (deixe vazio para usar cwd)" />
       <input type="text" id="filter" style="min-width: 300px;" placeholder="Filtrar projetos (separados por vírgula)" />
-      <button onclick="loadGraph()">Carregar Grafo</button>
+      <button onclick="loadProjects()">Carregar Projetos</button>
     </div>
   </header>
 
   <div class="container">
-    <div id="cy"></div>
+    <!-- <div class="sidebar-title">Projetos</div> -->
+    <div id="projectsList"></div>
     <div class="sidebar">
-      <div class="sidebar-title">Projetos</div>
-      <div id="projectsList"></div>
+      <div class="sidebar-title">Detalhes do Projeto</div>
+      <div id="projectsListSide"></div>
     </div>
   </div>
 
   <script>
-    let cy = cytoscape({
-      container: document.getElementById('cy'),
-      style: [
-        {
-          selector: 'node',
-          style: {
-            'background-color': '#58a6ff',
-            'label': 'data(label)',
-            'text-valign': 'center',
-            'text-halign': 'center',
-            'font-size': '12px',
-            'padding': '10px',
-            'border-width': 2,
-            'border-color': '#0d1117',
-          },
-        },
-        {
-          selector: 'node:selected',
-          style: {
-            'background-color': '#238636',
-            'border-color': '#58a6ff',
-          },
-        },
-        {
-          selector: 'edge',
-          style: {
-            'line-color': '#30363d',
-            'target-arrow-color': '#30363d',
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
-            'width': 2,
-          },
-        },
-        {
-          selector: 'edge:selected',
-          style: {
-            'line-color': '#58a6ff',
-            'target-arrow-color': '#58a6ff',
-            'width': 3,
-          },
-        },
-      ],
-      layout: {
-        name: 'cose',
-        directed: true,
-        animate: false,
-        // animationDuration: 500,
-        nodeSeparation: 50,
-      },
-    });
 
     let graphData = null;
 
-    async function loadGraph() {
+    async function loadProjects() {
+
+      document.querySelector('.loading').style.display = 'flex';
+
       const rootPath = document.getElementById('rootPath').value;
       const maxDepth = document.getElementById('maxDepth').value;
       const maxFiles = document.getElementById('maxFiles').value;
       const filter = document.getElementById('filter').value;
       
-      // let url = rootPath ? `/api/graph?root=${encodeURIComponent(rootPath)}` : '/api/graph';
-      let url = '/api/graph';
+      let url = '/api/find';
       const params = new URLSearchParams();
       if (maxDepth) params.append('maxDepth', maxDepth);
       if (maxFiles) params.append('maxFiles', maxFiles);
@@ -250,52 +239,83 @@
 
       try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Erro ao carregar grafo');
+        if (!response.ok) throw new Error('Erro ao carregar projetos');
 
         graphData = await response.json();
-        renderGraph(graphData);
-        updateProjectsList(graphData.projects);
+        updateProjectsList(graphData);
       } catch (error) {
         console.error('Erro:', error);
         document.getElementById('projectsList').innerHTML =
-          `<div class="error">Erro ao carregar o grafo: ${error.message}</div>`;
+          `<div class="error">Erro ao carregar os projetos: ${error.message}</div>`;
+      } finally {
+        document.querySelector('.loading').style.display = 'none';
       }
     }
 
-    function renderGraph(data) {
-      const elements = [
-        ...data.nodes.map((n) => ({ data: { id: n.id, label: n.label } })),
-        ...data.edges.map((e) => ({ data: { source: e.source, target: e.target } })),
-      ];
-
-      cy.elements().remove();
-      cy.add(elements);
-      cy.layout({ name: 'cose', directed: true, animate: false }).run();
-    }
-
-    function updateProjectsList(projects) {
+    function updateProjectsList(data) {
       const list = document.getElementById('projectsList');
-      list.innerHTML = projects
+
+      document.getElementById('stats').textContent = `Packages: ${data.find} - Processados: ${data.proccessed}`;
+      
+      list.innerHTML = data.projects
         .map(
-          (p) => `
-        <div class="project-item" onclick="selectProject('${p.id}')">
-          <div class="project-name">${p.name}</div>
-          <div class="project-path">📁 ${p.path || '.'}</div>
-          <div class="project-deps">📦 ${p.dependencies.length} deps</div>
-        </div>
-      `
+          (p) => 
+            {
+              const jsonData = JSON.stringify(p);
+              return `<div class="project-item" onclick='selectProject(\`${jsonData}\`)'>
+                    <div class="project-name">${p.name}</div>
+                    <div class="project-path">📁 ${p.path || '.'}</div>
+                    <div class="project-deps">📦 ${p.dependencies.length} 🚩 ${p.version}</div></div>`
+            }
         )
         .join('');
     }
 
     function selectProject(id) {
-      cy.$(`#${id}`).select();
+      console.log('Projeto selecionado:', id);
       document.querySelectorAll('.project-item').forEach((el) => el.classList.remove('selected'));
+      document.getElementById('projectsListSide').innerHTML = '';
+      const project = JSON.parse(id);
+      document.getElementById('projectsListSide').innerHTML = `
+        <div class="project-name">Nome: <a href="https://www.npmjs.com/package/${project.name}" target="_blank">${project.name}</a></div>
+        <div class="project-path"><a href="javascript: open('${project.path || '.'}');">Caminho: ${project.path || '.'}</a></div>
+        <div class="project-deps">Dependências: ${project.dependencies.length} / Versao: ${project.version}</div>
+        <code>
+          
+          ${project.dependencies.map(val => `
+            <div class="tag-dep">
+              <a href="https://www.npmjs.com/package/${val}" target="_blank">${val}</a>
+            </div>
+          `).join('')}
+
+          </code>
+      `;
       event.currentTarget.classList.add('selected');
     }
 
-    // Carregar grafo ao iniciar
-    window.addEventListener('load', loadGraph);
+    async function open(path) {
+      try {
+        const response = await fetch('/api/open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, rootPath: document.getElementById('rootPath').value  }),
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ VS Code aberto:', result.message);
+        } else {
+          console.error('❌ Erro:', result.error);
+          alert('Erro ao abrir VS Code: ' + result.error);
+        }
+      } catch (error) {
+        console.error('❌ Erro:', error);
+        alert('Erro ao abrir VS Code: ' + error.message);
+      }
+    }
+
+    // Carregar projetos ao iniciar
+    window.addEventListener('load', loadProjects);
   </script>
 </body>
 </html>

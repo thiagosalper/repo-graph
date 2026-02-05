@@ -5,16 +5,27 @@ import { scanMonorepo, clearPackageCache, getCacheStats, scanMonorepoFinderProje
 import { join, parse } from 'path';
 import { Eta } from 'eta'
 import path from 'path'
+// import { fileURLToPath } from 'url';
 
+// const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = new Hono();
 const eta = new Eta({ views: path.join(__dirname, 'view') })
 
-// Servir arquivos estáticos
 app.use('/*', serveStatic({ root: './public' }));
+
+app.use('/grapho', async (c) => {
+  const template = eta.render('./grapho', {});
+  return c.html(template);
+});
 
 app.get('/cache', async (c) => {
   const cache = getCacheStats();
   const template = eta.render('./cache', { cacheObj: cache });
+  return c.html(template);
+});
+
+app.use('/analysis', async (c) => {
+  const template = eta.render('./analysis', {});
   return c.html(template);
 });
 

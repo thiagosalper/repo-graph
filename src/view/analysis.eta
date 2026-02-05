@@ -1,0 +1,22 @@
+<% layout('layout') %>
+
+
+  <div class="container">
+    <!-- <div class="sidebar-title">Projetos</div> -->
+    <div id="projectsList">
+      <h1>Analise de stacktrace</h1>
+      <form id="stacktraceForm">
+        <div class="form-group">
+          <label for="stacktraceInput">Cole o stacktrace aqui:</label>
+          <textarea id="stacktraceInput" name="stacktraceInput" rows="10" required></textarea>
+        </div>
+        <button type="submit">Analisar</button>
+      </form>
+    </div>
+
+    <div id="analysisResult" style="display:block;">
+      <h2>Resultado da Análise</h2>
+      <pre id="resultContent"></pre>
+    </div>
+
+  </div>

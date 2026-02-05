@@ -1,6 +1,7 @@
 <nav style="padding: 16px;">
   <a href="find.html" style="color: #58a6ff; text-decoration: none; font-weight: 500;">Encontrar</a>
-  <a href="index.html" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Grafo</a>
+  <a href="grapho" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Grafo</a>
   <a href="dependency.html" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Dependências</a>
   <a href="cache" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Cache</a>
+  <a href="analysis" style="color: #58a6ff; text-decoration: none; font-weight: 500; margin-left: 1rem;">Farejador</a>
 </nav>
