@@ -18,3 +18,14 @@
 - ferramenta retrace do android sdk para maperar nomes ofuscados 
 - android/cmdline-tools/atest/bin/retrace mapping.txt stacktrace.txt
 
+# sumarizar ultimas alteracoes de um projeto baseado em commits 
+
+# sumarizar ultimas alteracoes de um projeto baseado em changelogs ou release notes
+
+# 
+
+# sumarizacao de release notes em busca de pontos importantes e cruzametno de crashs de libs usadas 
+
+# sumarizacao de commits em busca de pontos importantes de atencao e cruzamento de crashs
+
+# checagem de tamanho de bundles e insights de algum fora da curva nos ultimos releases
